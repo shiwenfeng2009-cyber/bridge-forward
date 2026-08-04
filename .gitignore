@@ -1,0 +1,9 @@
+/node_modules
+/.next
+/.open-next
+/.open-next.config.edge.backup.mjs
+/dist
+/out
+*.log
+.env*
+!.env.example
