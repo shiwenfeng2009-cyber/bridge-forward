@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InlineSiteSearch } from "@/features/search/inline-site-search";
 
 const pathways = [
   {
@@ -48,12 +49,7 @@ export default function Home() {
           </p>
         </div>
 
-        <form className="home-stage__search" action="/search" role="search">
-          <label className="sr-only" htmlFor="home-search">搜索校园信息与学生经验</label>
-          <span aria-hidden="true">⌕</span>
-          <input id="home-search" name="q" placeholder="搜索校园信息、规则或学生经验" type="search" />
-          <button type="submit">搜索 <small>Search</small></button>
-        </form>
+        <InlineSiteSearch className="home-stage__search" id="home-search" placeholder="搜索校园信息、规则或学生经验" />
 
         <div className="home-stage__paths" aria-label="首页主要功能">
           {pathways.map((item) => (

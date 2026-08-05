@@ -14,7 +14,7 @@ export function LanguageControl() {
   const { mode, setMode } = useLanguage();
 
   return (
-    <div className="language-control" role="group" aria-label="Secondary language / 第二语言">
+    <div className="language-control" data-no-translate role="group" aria-label="Secondary language / Language">
       {OPTIONS.map((option) => (
         <button
           aria-pressed={mode === option.mode}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InlineSiteSearch } from "@/features/search/inline-site-search";
 
 const informationCards = [
   {
@@ -67,12 +68,7 @@ export default function SchoolInformationPage() {
           <small>你不需要一次就弄懂所有事情，我们一步一步来。</small>
         </div>
 
-        <form className="information-scene__search" action="/search" role="search">
-          <label className="sr-only" htmlFor="scene-search">搜索校园信息</label>
-          <span aria-hidden="true">⌕</span>
-          <input id="scene-search" name="q" placeholder="搜索校园信息或资源" type="search" />
-          <button type="submit">搜索 <small>Search</small></button>
-        </form>
+        <InlineSiteSearch className="information-scene__search" id="scene-search" placeholder="搜索校园信息或资源" />
 
         <nav className="information-scene__cards" aria-label="校园信息分类">
           {informationCards.map((card) => (

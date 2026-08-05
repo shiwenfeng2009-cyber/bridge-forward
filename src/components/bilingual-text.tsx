@@ -13,7 +13,5 @@ type BilingualTextProps = {
 export function BilingualText({ zh, en, mode, className }: BilingualTextProps) {
   const language = useLanguage();
   const activeMode = mode ?? language.mode;
-
-  const translated = activeMode === "ja" ? `${zh}（日本語）` : activeMode === "ko" ? `${zh} (한국어)` : activeMode === "fil" ? `${zh} (Filipino)` : zh;
-  return <span className={className}><span lang="en">{en}</span><span className="bilingual-divider" aria-hidden="true"> / </span><span lang={activeMode}>{translated}</span></span>;
+  return <span className={className}><span lang="en" data-no-translate>{en}</span><span className="bilingual-divider" aria-hidden="true"> / </span><span lang={activeMode}>{zh}</span></span>;
 }

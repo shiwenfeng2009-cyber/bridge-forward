@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 const moods = ["Happy 开心", "Sad 难过", "Stressed 压力", "Lonely 孤独", "Homesick 想家", "Angry 生气", "Tired 疲惫", "Grateful 感恩", "Anxious 焦虑", "Other 其他"];
 const stories = [
@@ -14,13 +15,16 @@ const stories = [
 
 export default function MentalWellnessExperience(){
   const router=useRouter();
+  const {mode:languageMode,translateDynamic}=useLanguage();
   const [mode,setMode]=useState<"anonymous"|"private">("anonymous");
   const [entry,setEntry]=useState(""); const [mood,setMood]=useState(""); const [status,setStatus]=useState("");
   const [lights,setLights]=useState(2483); const [query,setQuery]=useState(""); const [open,setOpen]=useState<number|null>(null);
   const [storyFilter,setStoryFilter]=useState("All"); const [showLights,setShowLights]=useState(false); const [sharedStories,setSharedStories]=useState<typeof stories>([]);
+  const [translatedEntry,setTranslatedEntry]=useState("");
   useEffect(()=>{ const saved=localStorage.getItem("bridge-private-diary"); if(saved) setEntry(saved); const n=localStorage.getItem("bridge-lights"); if(n) setLights(Number(n)); try{const raw=localStorage.getItem("bridge-anonymous-stories");if(raw)setSharedStories(JSON.parse(raw));}catch{} },[]);
   const allStories=useMemo(()=>[...sharedStories,...stories],[sharedStories]);
   const visible=useMemo(()=>allStories.filter(s=>(storyFilter==="All"||s.grade===storyFilter)&&(s.title+s.zh+s.excerpt+s.body).toLowerCase().includes(query.toLowerCase())),[allStories,query,storyFilter]);
+  useEffect(()=>{let active=true;const timer=window.setTimeout(async()=>{if(languageMode==="zh"||!entry.trim()){if(active)setTranslatedEntry("");return;}const translated=await translateDynamic(entry);if(active)setTranslatedEntry(translated)},450);return()=>{active=false;window.clearTimeout(timer)}},[entry,languageMode,translateDynamic]);
   function submit(){ if(!entry.trim()){setStatus("Write a few words first. 请先写下一点感受。");return;} if(mode==="private"){localStorage.setItem("bridge-private-diary",entry);setStatus("Saved privately on this device. 已私密保存在此设备。") } else {const next=lights+1;const item={icon:"✦",title:"A New Anonymous Light",zh:"一束新的匿名心声",excerpt:entry.slice(0,110)+(entry.length>110?"…":""),grade:"Anonymous",time:"Just now",views:0,body:entry};const updated=[item,...sharedStories];setSharedStories(updated);localStorage.setItem("bridge-anonymous-stories",JSON.stringify(updated));setLights(next);localStorage.setItem("bridge-lights",String(next));setEntry("");setStatus("Your light has been shared anonymously. 你的一束光已匿名留下。");setShowLights(true)}}
   return <main className="mental-page">
     <div className="mental-shell">
@@ -32,7 +36,7 @@ export default function MentalWellnessExperience(){
       <section className="mental-compose-grid">
         <div className="mental-compose-card">
           <div className="mental-tabs"><button className={mode==="anonymous"?"active":""} onClick={()=>setMode("anonymous")}>✎ Write Anonymously<br/><span>匿名书写</span></button><button className={mode==="private"?"active":""} onClick={()=>setMode("private")}>▣ Save Privately<br/><span>私密保存</span></button></div>
-          <label className="sr-only" htmlFor="diary-entry">Diary entry</label><textarea id="diary-entry" maxLength={1000} value={entry} onChange={e=>setEntry(e.target.value)} placeholder="How are you feeling today? 你今天感觉怎么样？"/><small className="mental-count">{entry.length}/1000</small>
+          <label className="sr-only" htmlFor="diary-entry">Diary entry</label><textarea id="diary-entry" maxLength={1000} value={entry} onChange={e=>setEntry(e.target.value)} placeholder="How are you feeling today? 你今天感觉怎么样？"/><small className="mental-count">{entry.length}/1000</small>{translatedEntry&&translatedEntry!==entry?<div className="diary-translation"><strong>Translation · 翻译</strong><p>{translatedEntry}</p></div>:null}
           <h2>How are you feeling? <span>你现在感觉如何？</span></h2><div className="mood-grid">{moods.map(m=><button key={m} className={mood===m?"active":""} onClick={()=>setMood(m)}>○ {m}</button>)}</div>
           <button className="mental-submit" onClick={submit}>{mode==="private"?"Save Privately 私密保存":"Share Anonymously 匿名分享"} ↗</button><p className="mental-status" role="status">{status||"Your words may be a light for someone else. 你的话语，可能会成为别人的光。"}</p>
         </div>
