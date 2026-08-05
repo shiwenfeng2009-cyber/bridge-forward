@@ -10,7 +10,7 @@ type SearchPanelProps = {
 };
 
 function normalize(value: string) {
-  return value.trim().toLowerCase();
+  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, " ").replace(/\s+/g, " ");
 }
 
 export function SearchPanel({ initialQuery }: SearchPanelProps) {
@@ -24,12 +24,13 @@ export function SearchPanel({ initialQuery }: SearchPanelProps) {
       return searchItems;
     }
 
+    const tokens = normalized.split(" ").filter(Boolean);
     return searchItems.filter((item) => {
       const searchable = [item.title, item.zh, item.type, item.body, ...item.keywords]
         .join(" ")
         .toLowerCase();
 
-      return searchable.includes(normalized);
+      return searchable.includes(normalized) || tokens.every((token) => searchable.includes(token));
     });
   }, [query]);
 
@@ -87,7 +88,7 @@ export function SearchPanel({ initialQuery }: SearchPanelProps) {
       <div className="search-results" aria-live="polite">
         <p className="search-results__count">
           {results.length === 0
-            ? "No results yet. Try map, schedule, GPA, lunch, counselor, or stories."
+            ? `No search results for “${query.trim()}”. 没有搜索结果。Try map, schedule, GPA, clubs, counselor, or stories.`
             : `${results.length} result${results.length === 1 ? "" : "s"}`}
         </p>
 

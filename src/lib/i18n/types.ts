@@ -1,1 +1,1 @@
-export type LanguageMode = "zh" | "en" | "bilingual";
+export type LanguageMode = "zh" | "ja" | "ko" | "fil";

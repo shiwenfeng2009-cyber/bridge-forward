@@ -5,15 +5,16 @@ import type { LanguageMode } from "@/lib/i18n/types";
 
 const OPTIONS: ReadonlyArray<{ label: string; mode: LanguageMode }> = [
   { label: "中文", mode: "zh" },
-  { label: "EN", mode: "en" },
-  { label: "双语", mode: "bilingual" },
+  { label: "日本語", mode: "ja" },
+  { label: "한국어", mode: "ko" },
+  { label: "Filipino", mode: "fil" },
 ];
 
 export function LanguageControl() {
   const { mode, setMode } = useLanguage();
 
   return (
-    <div className="language-control" role="group" aria-label="语言选择 / Language">
+    <div className="language-control" role="group" aria-label="Secondary language / 第二语言">
       {OPTIONS.map((option) => (
         <button
           aria-pressed={mode === option.mode}

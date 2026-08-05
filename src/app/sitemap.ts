@@ -1,0 +1,3 @@
+import type { MetadataRoute } from "next";
+const routes = ["", "/school-information", "/school-information/map", "/school-information/schedule", "/school-information/people", "/school-information/academics", "/school-information/clubs", "/ask/questions", "/ask/reflection", "/ask/stories", "/resources", "/search"];
+export default function sitemap(): MetadataRoute.Sitemap { const now = new Date(); return routes.map((route) => ({ url: `https://bridge-forward-students.shiwenfeng2009.chatgpt.site${route}`, lastModified: now, changeFrequency: route === "" ? "weekly" : "monthly", priority: route === "" ? 1 : 0.8 })); }
