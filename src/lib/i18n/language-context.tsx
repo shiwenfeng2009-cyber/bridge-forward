@@ -6,16 +6,12 @@ import type { LanguageMode } from "./types";
 
 type Dictionary = Record<string, string>;
 const dictionaries = translations as Record<LanguageMode, Dictionary>;
-const encodeText=(value:string)=>{const bytes=new TextEncoder().encode(value);let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)};
-const decodeText=(value:string)=>{const binary=atob(value);const bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));return new TextDecoder().decode(bytes)};
+const targetCodes:Record<Exclude<LanguageMode,"zh">,string>={ja:"ja",ko:"ko",fil:"tl"};
 
 function translateKnown(value: string, mode: LanguageMode) {
   if (mode === "zh") return value;
-  let output = value;
-  for (const source of Object.keys(dictionaries[mode]).sort((a,b)=>b.length-a.length)) {
-    if (output.includes(source)) output = output.replaceAll(source, dictionaries[mode][source]);
-  }
-  return output;
+  const trimmed=value.trim(); const exact=dictionaries[mode][trimmed];
+  return exact ? value.replace(trimmed,exact) : value;
 }
 
 type LanguageContextValue = {
@@ -48,10 +44,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const key = `${mode}:${text}`;
     if (cache.current.has(key)) return cache.current.get(key)!;
     try {
-      const response = await fetch("/api/translate", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({encodedTexts:[encodeText(text)],target:mode}) });
+      const target=targetCodes[mode as Exclude<LanguageMode,"zh">];
+      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(text)}`);
       if (!response.ok) return known;
-      const data = await response.json() as {encodedTranslations?:string[]};
-      const result = data.encodedTranslations?.[0] ? decodeText(data.encodedTranslations[0]) : known;
+      const data = await response.json() as Array<unknown>;
+      const segments=(data[0] as Array<unknown[]>)||[];
+      const result=segments.map(segment=>String(segment[0]??"")).join("")||known;
       cache.current.set(key,result);
       return result;
     } catch { return known; }
