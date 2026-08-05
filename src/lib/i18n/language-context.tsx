@@ -33,7 +33,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   function setMode(next: LanguageMode) {
-    setModeState(next);
+    if(next===mode)return;
+    document.documentElement.classList.add("language-is-switching");
+    const update=()=>setModeState(next);
+    const documentWithTransitions=document as Document & {startViewTransition?:(callback:()=>void)=>{finished:Promise<void>}};
+    const transition=documentWithTransitions.startViewTransition?.(update);
+    if(!transition)update();
     window.localStorage.setItem("bridge-secondary-language", next);
   }
 
@@ -73,10 +78,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         field.dataset.originalPlaceholder=original; field.placeholder=mode==="zh"?original:await translateDynamic(original);
       }));
     }
-    translateRoot(document.body);
+    translateRoot(document.body).finally(()=>{if(!cancelled)document.documentElement.classList.remove("language-is-switching")});
     const observer=new MutationObserver(records=>{for(const record of records)for(const node of Array.from(record.addedNodes))if(node.nodeType===Node.ELEMENT_NODE)translateRoot(node as Element);else if(node.nodeType===Node.TEXT_NODE&&node.parentElement)translateRoot(node.parentElement)});
     observer.observe(document.body,{childList:true,subtree:true});
-    return()=>{cancelled=true;observer.disconnect()};
+    return()=>{cancelled=true;observer.disconnect();document.documentElement.classList.remove("language-is-switching")};
   },[mode,translateDynamic]);
 
   return <LanguageContext.Provider value={{mode,setMode,translateDynamic}}>{children}</LanguageContext.Provider>;
