@@ -39,20 +39,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const translateDynamic = useCallback(async (text: string) => {
     if (mode === "zh" || !/[\u3400-\u9fff]/.test(text)) return text;
-    const known = translateKnown(text, mode);
-    if (known !== text) return known;
-    const key = `${mode}:${text}`;
-    if (cache.current.has(key)) return cache.current.get(key)!;
-    try {
-      const target=targetCodes[mode as Exclude<LanguageMode,"zh">];
-      const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(text)}`);
-      if (!response.ok) return known;
-      const data = await response.json() as Array<unknown>;
-      const segments=(data[0] as Array<unknown[]>)||[];
-      const result=segments.map(segment=>String(segment[0]??"")).join("")||known;
-      cache.current.set(key,result);
-      return result;
-    } catch { return known; }
+    const translateFragment=async(fragment:string)=>{
+      const known=translateKnown(fragment,mode);if(known!==fragment)return known;
+      const key=`${mode}:${fragment}`;if(cache.current.has(key))return cache.current.get(key)!;
+      try{const target=targetCodes[mode as Exclude<LanguageMode,"zh">];const response=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(fragment)}`);if(!response.ok)return fragment;const data=await response.json() as Array<unknown>;const segments=(data[0] as Array<unknown[]>)||[];const result=segments.map(segment=>String(segment[0]??"")).join("")||fragment;cache.current.set(key,result);return result}catch{return fragment}
+    };
+    if(!/[A-Za-z]/.test(text))return translateFragment(text);
+    const pattern=/[㐀-鿿][㐀-鿿，。！？、；：…（）《》“”‘’·\s]*/g;
+    const matches=[...text.matchAll(pattern)];if(!matches.length)return text;
+    const translated=await Promise.all(matches.map(match=>translateFragment(match[0])));let output="",cursor=0;
+    matches.forEach((match,index)=>{output+=text.slice(cursor,match.index)+translated[index];cursor=(match.index??0)+match[0].length});
+    return output+text.slice(cursor);
   }, [mode]);
 
   useEffect(() => {
