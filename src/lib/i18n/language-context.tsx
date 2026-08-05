@@ -6,6 +6,8 @@ import type { LanguageMode } from "./types";
 
 type Dictionary = Record<string, string>;
 const dictionaries = translations as Record<LanguageMode, Dictionary>;
+const encodeText=(value:string)=>{const bytes=new TextEncoder().encode(value);let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)};
+const decodeText=(value:string)=>{const binary=atob(value);const bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));return new TextDecoder().decode(bytes)};
 
 function translateKnown(value: string, mode: LanguageMode) {
   if (mode === "zh") return value;
@@ -42,14 +44,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const translateDynamic = useCallback(async (text: string) => {
     if (mode === "zh" || !/[\u3400-\u9fff]/.test(text)) return text;
     const known = translateKnown(text, mode);
-    if (!/[\u3400-\u9fff]/.test(known)) return known;
+    if (known !== text) return known;
     const key = `${mode}:${text}`;
     if (cache.current.has(key)) return cache.current.get(key)!;
     try {
-      const response = await fetch("/api/translate", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({texts:[text],target:mode}) });
+      const response = await fetch("/api/translate", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({encodedTexts:[encodeText(text)],target:mode}) });
       if (!response.ok) return known;
-      const data = await response.json() as {translations?:string[]};
-      const result = data.translations?.[0] || known;
+      const data = await response.json() as {encodedTranslations?:string[]};
+      const result = data.encodedTranslations?.[0] ? decodeText(data.encodedTranslations[0]) : known;
       cache.current.set(key,result);
       return result;
     } catch { return known; }
