@@ -13,7 +13,7 @@ export async function getApprovedQuestionCards(): Promise<PublicCard[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("questions")
-      .select("id,title,body,category,status,created_at,profiles(nickname)")
+      .select("id,title,body,category,status,created_at")
       .eq("status", "approved")
       .order("created_at", { ascending: false })
       .limit(20);
@@ -30,7 +30,7 @@ export async function getApprovedStoryCards(): Promise<PublicCard[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("stories")
-      .select("id,title,body,status,publish_as_anonymous,created_at,profiles(nickname)")
+      .select("id,title,body,status,publish_as_anonymous,created_at")
       .eq("status", "approved")
       .order("created_at", { ascending: false })
       .limit(20);

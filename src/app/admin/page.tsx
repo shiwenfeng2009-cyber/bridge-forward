@@ -1,124 +1,40 @@
 import Link from "next/link";
-
+import { submitModerationFormAction } from "@/features/admin/actions";
 import { canModerate, moderationQueues } from "@/features/admin/moderation";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type QueueCount = {
-  key: string;
-  title: string;
-  description: string;
-  count: number;
-};
-
-type AdminDashboardData =
-  | { status: "setup"; message: string }
-  | { status: "signed-out" }
-  | { status: "forbidden" }
-  | { status: "ready"; queues: QueueCount[] };
-
-async function getAdminDashboardData(): Promise<AdminDashboardData> {
-  let supabase: Awaited<ReturnType<typeof createClient>>;
-
-  try {
-    supabase = await createClient();
-  } catch {
-    return {
-      status: "setup",
-      message:
-        "Supabase environment variables are not configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY before using moderation.",
-    };
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { status: "signed-out" };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!canModerate(profile?.role)) {
-    return { status: "forbidden" };
-  }
-
-  const queues = await Promise.all(
-    moderationQueues.map(async (queue) => {
-      const { count } = await supabase
-        .from(queue.key)
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-
-      return {
-        key: queue.key,
-        title: queue.title,
-        description: queue.description,
-        count: count ?? 0,
-      };
-    }),
-  );
-
-  return { status: "ready", queues };
-}
-
 export default async function AdminPage() {
-  const data = await getAdminDashboardData();
+  let supabase;
+  try { supabase = await createClient(); }
+  catch { return <main className="admin-console"><div className="notice-card">后台连接尚未配置。</div></main>; }
 
-  return (
-    <main className="section-page">
-      <section className="section-hero" aria-labelledby="admin-heading">
-        <div className="section-hero__copy">
-          <p className="eyebrow">Admin</p>
-          <h1 id="admin-heading">审核后台</h1>
-          <p>
-            管理员和 moderator 在这里处理 pending questions、stories、replies、reports
-            和 Verified Supporter applications。后台不会显示私人 Reflection Corner 记录。
-          </p>
-        </div>
-        <div className="section-hero__art" aria-hidden="true" />
-      </section>
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return <main className="admin-console"><div className="notice-card">请先使用管理员账号 <Link href="/sign-in">登录</Link>。</div></main>;
+  const { data: profile } = await supabase.from("profiles").select("role,nickname").eq("id", user.id).single();
+  if (!canModerate(profile?.role)) return <main className="admin-console"><div className="notice-card">此账号尚未获得管理员权限。</div></main>;
 
-      {data.status === "setup" ? (
-        <aside className="notice-card">
-          <p>{data.message}</p>
-        </aside>
-      ) : null}
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+  const [{ count: members }, { count: views }, { data: recentViews }, ...queueResults] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase.from("page_views").select("id", { count: "exact", head: true }).gte("created_at", since),
+    supabase.from("page_views").select("path,language,device_class,created_at").order("created_at", { ascending: false }).limit(40),
+    ...moderationQueues.map(queue => supabase.from(queue.key).select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(20)),
+  ]);
+  const pending = queueResults.reduce((sum, result) => sum + (result.data?.length ?? 0), 0);
+  const byPath = new Map<string, number>();
+  for (const item of recentViews ?? []) byPath.set(item.path, (byPath.get(item.path) ?? 0) + 1);
 
-      {data.status === "signed-out" ? (
-        <aside className="notice-card">
-          <p>
-            请先登录管理员账号。Please <Link href="/sign-in">sign in</Link> as a
-            moderator or admin.
-          </p>
-        </aside>
-      ) : null}
-
-      {data.status === "forbidden" ? (
-        <aside className="notice-card">
-          <p>这个页面只开放给 moderator 和 admin。This page is restricted.</p>
-        </aside>
-      ) : null}
-
-      {data.status === "ready" ? (
-        <section className="admin-queue-grid" aria-label="Moderation queues">
-          {data.queues.map((queue) => (
-            <article className="admin-queue-card" key={queue.key}>
-              <span className="card-kicker">{queue.key.replaceAll("_", " ")}</span>
-              <h2>{queue.title}</h2>
-              <p>{queue.description}</p>
-              <strong>{queue.count}</strong>
-              <span>pending</span>
-            </article>
-          ))}
-        </section>
-      ) : null}
-    </main>
-  );
+  return <main className="admin-console">
+    <header><p>Bridge Forward Operations</p><h1>网站运营后台</h1><span>账号、公开内容审核与匿名访问统计（不显示密码或私人日记）</span></header>
+    <section className="admin-metrics">
+      <article><strong>{members ?? 0}</strong><span>注册账号</span></article>
+      <article><strong>{views ?? 0}</strong><span>近 30 天页面浏览</span></article>
+      <article><strong>{pending}</strong><span>待审核项目</span></article>
+      <article><strong>{new Set((recentViews ?? []).map(v => `${v.path}:${v.created_at.slice(0,10)}`)).size}</strong><span>近期活跃页面/日</span></article>
+    </section>
+    <section className="admin-panel"><h2>近期热门页面</h2><div className="admin-paths">{[...byPath.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([path,count])=><div key={path}><code>{path}</code><strong>{count}</strong></div>)}</div></section>
+    <section className="admin-panel"><h2>内容审核</h2>{moderationQueues.map((queue,index)=><div className="admin-queue" key={queue.key}><h3>{queue.title} <span>{queueResults[index].data?.length ?? 0}</span></h3>{(queueResults[index].data ?? []).map((item: Record<string, unknown>)=><article key={String(item.id)}><div><strong>{String(item.title ?? item.reason ?? queue.key)}</strong><p>{String(item.body ?? item.note ?? "等待审核")}</p></div><form action={submitModerationFormAction}><input type="hidden" name="targetTable" value={queue.key}/><input type="hidden" name="targetId" value={String(item.id)}/><button name="status" value="approved">通过</button><button name="status" value="rejected">拒绝</button><button name="status" value="removed">移除</button></form></article>)}{!queueResults[index].data?.length&&<p className="admin-empty">暂无待审核内容</p>}</div>)}</section>
+  </main>;
 }

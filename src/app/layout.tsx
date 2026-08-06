@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { GlobalBackButton } from "@/components/global-back-button";
 import { LanguageProvider } from "@/lib/i18n/language-context";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 
 import "./globals.css";
 import "./home-final.css";
@@ -18,5 +19,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body><LanguageProvider><SiteHeader /><GlobalBackButton />{children}</LanguageProvider></body></html>;
+  return <html lang="zh-CN"><body><LanguageProvider><AnalyticsTracker /><SiteHeader /><GlobalBackButton />{children}</LanguageProvider></body></html>;
 }
