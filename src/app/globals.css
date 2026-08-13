@@ -571,6 +571,18 @@ body,
   color: #374f43;
 }
 
+.header-user-name {
+  max-width: 13rem;
+  cursor: default;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-sign-out-form {
+  display: contents;
+}
+
 .language-control {
   border-color: var(--glass-border);
   border-radius: 0.75rem;

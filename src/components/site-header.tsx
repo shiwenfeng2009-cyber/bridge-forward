@@ -1,7 +1,11 @@
 import Link from "next/link";
 
 import { LanguageControl } from "@/components/language-control";
-import { submitLoginAction, submitRegisterAction } from "@/features/auth/actions";
+import { logoutAction, submitLoginAction, submitRegisterAction } from "@/features/auth/actions";
+
+export type HeaderUser = {
+  label: string;
+};
 
 function AuthModal({ mode }: { mode: "login" | "register" }) {
   const id = mode === "login" ? "sign-in" : "create-account";
@@ -56,7 +60,7 @@ function AuthModal({ mode }: { mode: "login" | "register" }) {
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ user = null }: { user?: HeaderUser | null }) {
   return (
     <>
       <header className="site-header">
@@ -68,13 +72,24 @@ export function SiteHeader() {
           <div className="site-header__actions">
             <Link className="header-home-link" href="/">首页 <small>Home</small></Link>
             <LanguageControl />
-            <a className="header-auth-button header-auth-button--ghost" href="#sign-in">登录 <small>Sign in</small></a>
-            <a className="header-auth-button header-auth-button--solid" href="#create-account">创建账号 <small>Create</small></a>
+            {user ? (
+              <>
+                <span className="header-auth-button header-user-name" title={user.label}>{user.label}</span>
+                <form action={logoutAction} className="header-sign-out-form">
+                  <button className="header-auth-button header-auth-button--solid" type="submit">退出登录 <small>Sign out</small></button>
+                </form>
+              </>
+            ) : (
+              <>
+                <a className="header-auth-button header-auth-button--ghost" href="#sign-in">登录 <small>Sign in</small></a>
+                <a className="header-auth-button header-auth-button--solid" href="#create-account">创建账号 <small>Create</small></a>
+              </>
+            )}
           </div>
         </div>
       </header>
-      <AuthModal mode="login" />
-      <AuthModal mode="register" />
+      {!user && <AuthModal mode="login" />}
+      {!user && <AuthModal mode="register" />}
     </>
   );
 }

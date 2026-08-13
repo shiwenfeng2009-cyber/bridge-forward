@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { GlobalBackButton } from "@/components/global-back-button";
 import { LanguageProvider } from "@/lib/i18n/language-context";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { createClient } from "@/lib/supabase/server";
 
 import "./globals.css";
 import "./home-final.css";
@@ -18,6 +19,29 @@ export const metadata: Metadata = {
   openGraph: { title: "Bridge Forward", description: "School guidance, peer connection, and mental wellness support for immigrant students.", url: "/", siteName: "Bridge Forward", type: "website" },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body><LanguageProvider><AnalyticsTracker /><SiteHeader /><GlobalBackButton />{children}</LanguageProvider></body></html>;
+async function getHeaderUser() {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) return null;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("nickname")
+      .eq("id", user.id)
+      .maybeSingle();
+    const metadataName = [user.user_metadata.display_name, user.user_metadata.full_name, user.user_metadata.name]
+      .find((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+    return { label: profile?.nickname?.trim() || metadataName?.trim() || user.email || user.phone || "Account" };
+  } catch {
+    // Keep public pages available when Supabase is not configured (for example, during a local build).
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const user = await getHeaderUser();
+  return <html lang="zh-CN"><body><LanguageProvider><AnalyticsTracker /><SiteHeader user={user} /><GlobalBackButton />{children}</LanguageProvider></body></html>;
 }

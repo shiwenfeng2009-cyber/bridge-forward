@@ -171,3 +171,15 @@ export async function submitLoginAction(formData: FormData): Promise<void> {
     redirect("/ask");
   }
 }
+
+export async function logoutAction(): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw new Error("Unable to sign out.");
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/");
+}
