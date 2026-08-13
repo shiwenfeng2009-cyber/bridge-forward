@@ -8,11 +8,13 @@ import {
 } from "@/features/auth/schemas";
 
 describe("auth and profile schemas", () => {
-  it("requires only email, password, nickname, and native language for registration", () => {
+  it("requires account method, credentials, display name, and native language for registration", () => {
     const result = registerSchema.safeParse({
-      email: "new.student@example.com",
+      identifierType: "gmail",
+      identifier: "new.student@example.com",
       password: "safe-password-123",
-      nickname: "IslandBridge",
+      identityMode: "anonymous",
+      displayName: "IslandBridge",
       nativeLanguage: "Chinese",
     });
 
@@ -42,9 +44,10 @@ describe("auth and profile schemas", () => {
     expect(result.success).toBe(false);
   });
 
-  it("keeps login limited to email and password", () => {
+  it("keeps login limited to account method, identifier, and password", () => {
     const result = loginSchema.safeParse({
-      email: "student@example.com",
+      identifierType: "gmail",
+      identifier: "student@example.com",
       password: "safe-password-123",
     });
 

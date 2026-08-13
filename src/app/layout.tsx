@@ -5,6 +5,7 @@ import { GlobalBackButton } from "@/components/global-back-button";
 import { LanguageProvider } from "@/lib/i18n/language-context";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { createClient } from "@/lib/supabase/server";
+import { getUserDisplayName, getUserInitial } from "@/features/auth/profile";
 
 import "./globals.css";
 import "./home-final.css";
@@ -31,10 +32,8 @@ async function getHeaderUser() {
       .select("nickname")
       .eq("id", user.id)
       .maybeSingle();
-    const metadataName = [user.user_metadata.display_name, user.user_metadata.full_name, user.user_metadata.name]
-      .find((value): value is string => typeof value === "string" && value.trim().length > 0);
-
-    return { label: profile?.nickname?.trim() || metadataName?.trim() || user.email || user.phone || "Account" };
+    const label = getUserDisplayName(user, profile);
+    return { label, initial: getUserInitial(label) };
   } catch {
     // Keep public pages available when Supabase is not configured (for example, during a local build).
     return null;

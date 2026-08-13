@@ -5,12 +5,9 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
-import { loginSchema, registerSchema } from "./schemas";
-
-type AuthActionState = {
-  ok: boolean;
-  message: string;
-};
+import { loginSchema, profileSchema, registerSchema } from "./schemas";
+import { type AuthActionState, friendlyAuthError } from "./state";
+import { signOutSession } from "./logout";
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -38,87 +35,55 @@ export async function registerAction(
     displayName: formValue(formData, "displayName"),
     nativeLanguage: formValue(formData, "nativeLanguage"),
     grade: formValue(formData, "grade"),
-    interests: formValue(formData, "interests")
-      .split(",")
-      .map((interest) => interest.trim())
-      .filter(Boolean),
+    interests: formValue(formData, "interests").split(",").map((value) => value.trim()).filter(Boolean),
   });
 
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message: "请检查必填信息。Please check the required fields.",
-    };
-  }
+  if (!parsed.success) return { ok: false, message: "请检查必填信息。Please check the required fields." };
 
   const supabase = await createClient();
   const origin = formValue(formData, "origin") || process.env.NEXT_PUBLIC_SITE_URL || "";
-
-  const nickname =
-    parsed.data.identityMode === "anonymous"
-      ? parsed.data.displayName || "匿名同学"
-      : parsed.data.displayName;
-
-  if (nickname.trim().length < 2) {
-    return { ok: false, message: "请输入姓名或昵称。Please enter a name or nickname." };
-  }
-
+  const nickname = parsed.data.displayName || "匿名同学";
   const authOptions = {
     data: {
       identity_mode: parsed.data.identityMode,
       identifier_type: parsed.data.identifierType,
+      display_name: nickname,
+      native_language: parsed.data.nativeLanguage,
+      grade: parsed.data.grade ?? null,
+      interests: parsed.data.interests,
     },
     emailRedirectTo: origin ? `${origin}/auth/confirm` : undefined,
   };
-
-  const { data, error } =
-    parsed.data.identifierType === "phone"
-      ? await supabase.auth.signUp({
-          phone: normalizePhone(parsed.data.identifier),
-          password: parsed.data.password,
-          options: authOptions,
-        })
-      : await supabase.auth.signUp({
-          email:
-            parsed.data.identifierType === "student_id"
-              ? studentIdEmail(parsed.data.identifier)
-              : parsed.data.identifier,
-          password: parsed.data.password,
-          options: authOptions,
-        });
+  const { data, error } = parsed.data.identifierType === "phone"
+    ? await supabase.auth.signUp({ phone: normalizePhone(parsed.data.identifier), password: parsed.data.password, options: authOptions })
+    : await supabase.auth.signUp({
+        email: parsed.data.identifierType === "student_id" ? studentIdEmail(parsed.data.identifier) : parsed.data.identifier,
+        password: parsed.data.password,
+        options: authOptions,
+      });
 
   if (error || !data.user) {
-    return {
-      ok: false,
-      message: "暂时无法创建账号。Unable to create the account right now.",
-    };
+    return { ok: false, message: friendlyAuthError(error?.code, "暂时无法创建账号。Unable to create the account right now.") };
   }
 
-  const profileResult = await supabase.from("profiles").insert({
-    id: data.user.id,
-    nickname,
-    native_language: parsed.data.nativeLanguage,
-    grade: parsed.data.grade ?? null,
-    interests: parsed.data.interests,
-    role: "student",
-  });
-
-  if (profileResult.error) {
-    return {
-      ok: false,
-      message: "账号已创建，但资料保存失败。Please sign in later and finish your profile.",
-    };
+  if (data.session) {
+    await supabase.from("profiles").upsert({
+      id: data.user.id,
+      nickname,
+      native_language: parsed.data.nativeLanguage,
+      grade: parsed.data.grade ?? null,
+      interests: parsed.data.interests,
+      role: "student",
+    }, { onConflict: "id" });
+    revalidatePath("/", "layout");
   }
 
-  revalidatePath("/");
   return {
     ok: true,
-    message: "请检查你的 email 完成验证。Check your email to continue.",
+    message: data.session
+      ? "账号创建成功，已登录。Account created and signed in."
+      : "注册成功！请检查邮箱并点击确认链接。Registration successful—check your email to continue.",
   };
-}
-
-export async function submitRegisterAction(formData: FormData): Promise<void> {
-  await registerAction({ ok: false, message: "" }, formData);
 }
 
 export async function loginAction(
@@ -130,56 +95,67 @@ export async function loginAction(
     identifier: formValue(formData, "identifier"),
     password: formValue(formData, "password"),
   });
-
-  if (!parsed.success) {
-    return {
-      ok: false,
-      message: "请输入 email 和密码。Please enter your email and password.",
-    };
-  }
+  if (!parsed.success) return { ok: false, message: "请输入账号和密码。Please enter your account and password." };
 
   const supabase = await createClient();
-  const credentials =
-    parsed.data.identifierType === "phone"
-      ? { phone: normalizePhone(parsed.data.identifier), password: parsed.data.password }
-      : {
-          email:
-            parsed.data.identifierType === "student_id"
-              ? studentIdEmail(parsed.data.identifier)
-              : parsed.data.identifier,
-          password: parsed.data.password,
-        };
-  const { error } = await supabase.auth.signInWithPassword(credentials);
-
-  if (error) {
-    return {
-      ok: false,
-      message: "登录失败。Unable to sign in.",
-    };
+  const credentials = parsed.data.identifierType === "phone"
+    ? { phone: normalizePhone(parsed.data.identifier), password: parsed.data.password }
+    : {
+        email: parsed.data.identifierType === "student_id" ? studentIdEmail(parsed.data.identifier) : parsed.data.identifier,
+        password: parsed.data.password,
+      };
+  const { data, error } = await supabase.auth.signInWithPassword(credentials);
+  if (error || !data.user || !data.session) {
+    return { ok: false, message: friendlyAuthError(error?.code, "登录失败。Unable to sign in.") };
   }
 
-  revalidatePath("/");
-  return {
-    ok: true,
-    message: "登录成功。Welcome back.",
-  };
+  const metadata = data.user.user_metadata;
+  await supabase.from("profiles").upsert({
+    id: data.user.id,
+    nickname: typeof metadata.display_name === "string" && metadata.display_name.trim()
+      ? metadata.display_name.trim().slice(0, 30)
+      : (data.user.email?.split("@")[0] || data.user.phone || "Bridge Student").slice(0, 30),
+    native_language: typeof metadata.native_language === "string" && metadata.native_language.trim()
+      ? metadata.native_language.trim().slice(0, 40)
+      : "未设置 / Not set",
+    grade: typeof metadata.grade === "number" ? metadata.grade : null,
+    interests: Array.isArray(metadata.interests) ? metadata.interests.slice(0, 8) : [],
+    role: "student",
+  }, { onConflict: "id", ignoreDuplicates: true });
+
+  revalidatePath("/", "layout");
+  redirect("/ask?auth=logged-in");
 }
 
-export async function submitLoginAction(formData: FormData): Promise<void> {
-  const result = await loginAction({ ok: false, message: "" }, formData);
-  if (result.ok) {
-    redirect("/ask");
-  }
+export async function updateProfileAction(formData: FormData): Promise<void> {
+  const parsed = profileSchema.safeParse({
+    nickname: formValue(formData, "nickname"),
+    nativeLanguage: formValue(formData, "nativeLanguage"),
+    grade: formValue(formData, "grade"),
+    interests: formValue(formData, "interests").split(",").map((value) => value.trim()).filter(Boolean),
+  });
+  if (!parsed.success) redirect("/account?status=invalid");
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/?auth=required#sign-in");
+
+  const { error } = await supabase.from("profiles").update({
+    nickname: parsed.data.nickname,
+    native_language: parsed.data.nativeLanguage,
+    grade: parsed.data.grade ?? null,
+    interests: parsed.data.interests,
+  }).eq("id", user.id);
+  if (error) redirect("/account?status=error");
+
+  revalidatePath("/", "layout");
+  revalidatePath("/account");
+  redirect("/account?status=saved");
 }
 
 export async function logoutAction(): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    throw new Error("Unable to sign out.");
-  }
-
+  await signOutSession(supabase);
   revalidatePath("/", "layout");
   redirect("/");
 }

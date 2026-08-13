@@ -9,6 +9,8 @@ import {
 
 describe("admin moderation helpers", () => {
   it("allows only moderators and admins to moderate", () => {
+    expect(canModerate(null)).toBe(false);
+    expect(canModerate(undefined)).toBe(false);
     expect(canModerate("student")).toBe(false);
     expect(canModerate("verified_supporter")).toBe(false);
     expect(canModerate("moderator")).toBe(true);

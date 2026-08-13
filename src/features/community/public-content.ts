@@ -7,6 +7,7 @@ export type QuestionRow = {
   category: string;
   status: string;
   created_at: string;
+  profiles?: { nickname: string } | null;
 };
 
 export type StoryRow = {
@@ -16,6 +17,7 @@ export type StoryRow = {
   status: string;
   publish_as_anonymous: boolean;
   created_at: string;
+  profiles?: { nickname: string } | null;
 };
 
 export type PublicCard = {
