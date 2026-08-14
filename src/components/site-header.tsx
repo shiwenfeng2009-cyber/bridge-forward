@@ -19,7 +19,7 @@ function AuthModal({ mode }: { mode: "login" | "register" }) {
           <a aria-selected={mode === "login"} href="#sign-in" role="tab">登录 <small>Sign in</small></a>
           <a aria-selected={mode === "register"} href="#create-account" role="tab">创建账号 <small>Create account</small></a>
         </div>
-        <AuthActionForm mode={mode} />
+        <AuthActionForm mode={mode} reopenModalOnResult />
       </section>
     </div>
   );

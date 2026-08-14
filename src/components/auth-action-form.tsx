@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import {
   loginAction,
@@ -8,9 +8,21 @@ import {
 } from "@/features/auth/actions";
 import { initialAuthActionState } from "@/features/auth/state";
 
-export function AuthActionForm({ mode }: { mode: "login" | "register" }) {
+export function AuthActionForm({
+  mode,
+  reopenModalOnResult = false,
+}: {
+  mode: "login" | "register";
+  reopenModalOnResult?: boolean;
+}) {
   const action = mode === "login" ? loginAction : registerAction;
   const [state, formAction, pending] = useActionState(action, initialAuthActionState);
+
+  useEffect(() => {
+    if (reopenModalOnResult && state.message) {
+      window.location.hash = mode === "login" ? "sign-in" : "create-account";
+    }
+  }, [mode, reopenModalOnResult, state.message]);
 
   return (
     <form action={formAction} className={`auth-modal__form${mode === "register" ? " auth-modal__form--register" : ""}`}>
