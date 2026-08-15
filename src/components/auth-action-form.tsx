@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import {
   loginAction,
@@ -17,12 +17,18 @@ export function AuthActionForm({
 }) {
   const action = mode === "login" ? loginAction : registerAction;
   const [state, formAction, pending] = useActionState(action, initialAuthActionState);
+  const [confirmationMessage, setConfirmationMessage] = useState("");
 
   useEffect(() => {
+    if (mode === "login" && new URLSearchParams(window.location.search).get("auth") === "confirmed") {
+      setConfirmationMessage("邮箱已确认，请登录。Email confirmed—please sign in.");
+    }
     if (reopenModalOnResult && state.message) {
       window.location.hash = mode === "login" ? "sign-in" : "create-account";
     }
   }, [mode, reopenModalOnResult, state.message]);
+
+  const visibleMessage = state.message || confirmationMessage;
 
   return (
     <form action={formAction} className={`auth-modal__form${mode === "register" ? " auth-modal__form--register" : ""}`}>
@@ -49,9 +55,9 @@ export function AuthActionForm({
           <label>母语 <small>Native language</small><input defaultValue="中文" maxLength={40} minLength={2} name="nativeLanguage" required /></label>
         </>
       )}
-      {state.message && (
-        <p aria-live="polite" className={`auth-modal__message${state.ok ? " auth-modal__message--success" : ""}`} role="status">
-          {state.message}
+      {visibleMessage && (
+        <p aria-live="polite" className={`auth-modal__message${state.ok || confirmationMessage ? " auth-modal__message--success" : ""}`} role="status">
+          {visibleMessage}
         </p>
       )}
       <button disabled={pending} type="submit">

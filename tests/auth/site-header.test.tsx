@@ -16,6 +16,13 @@ describe("SiteHeader authentication state", () => {
     expect(screen.getAllByRole("dialog")).toHaveLength(2);
   });
 
+  it("guides confirmed email users back to sign in", () => {
+    window.history.replaceState({}, "", "/?auth=confirmed#sign-in");
+    renderHeader(null);
+    expect(screen.getByText("邮箱已确认，请登录。Email confirmed—please sign in.")).toBeInTheDocument();
+    window.history.replaceState({}, "", "/");
+  });
+
   it("shows the authenticated account menu and hides guest controls", () => {
     renderHeader({ initial: "I", label: "IslandBridge" });
     expect(screen.queryByRole("link", { name: "登录 Sign in" })).not.toBeInTheDocument();

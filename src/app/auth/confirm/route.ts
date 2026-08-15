@@ -10,6 +10,13 @@ export async function GET(request: NextRequest) {
   const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
   const next = requestUrl.searchParams.get("next") ?? "/ask";
 
+  // Supabase's default hosted confirmation template verifies the email on the
+  // Auth domain before redirecting here, so there is no code/token to exchange.
+  // In that flow the account is active, but the user still needs to sign in.
+  if (!code && !(tokenHash && type)) {
+    return NextResponse.redirect(new URL("/?auth=confirmed#sign-in", request.url));
+  }
+
   const supabase = await createClient();
   const result = code
     ? await supabase.auth.exchangeCodeForSession(code)
