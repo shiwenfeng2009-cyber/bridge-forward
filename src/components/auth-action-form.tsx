@@ -40,14 +40,8 @@ export function AuthActionForm({
           </select>
         </label>
       )}
-      <label>{mode === "login" ? "登录方式" : "注册方式"} <small>{mode === "login" ? "Sign-in method" : "Account method"}</small>
-        <select defaultValue="gmail" name="identifierType">
-          <option value="gmail">Gmail / 邮箱</option>
-          <option value="phone">电话号码 / Phone</option>
-          <option value="student_id">学生证号 / Student ID</option>
-        </select>
-      </label>
-      <label>账号 <small>Identifier</small><input autoComplete="username" name="identifier" required /></label>
+      <input name="identifierType" type="hidden" value="gmail" />
+      <label>邮箱 <small>Email</small><input autoComplete="email" name="identifier" required type="email" /></label>
       <label>密码 <small>Password</small><input autoComplete={mode === "login" ? "current-password" : "new-password"} minLength={8} name="password" required type="password" /></label>
       {mode === "register" && (
         <>

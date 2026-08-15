@@ -21,6 +21,18 @@ describe("auth and profile schemas", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts only a valid email for public registration", () => {
+    const base = {
+      password: "safe-password-123",
+      identityMode: "anonymous",
+      displayName: "IslandBridge",
+      nativeLanguage: "Chinese",
+    };
+
+    expect(registerSchema.safeParse({ ...base, identifierType: "phone", identifier: "+18085550100" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...base, identifierType: "gmail", identifier: "not-an-email" }).success).toBe(false);
+  });
+
   it("allows grade and interests as optional profile fields", () => {
     const result = profileSchema.safeParse({
       nickname: "NewPath",

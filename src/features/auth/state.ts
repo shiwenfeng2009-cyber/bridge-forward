@@ -14,6 +14,11 @@ export function friendlyAuthError(code?: string, fallback = "暂时无法完成�
     case "over_email_send_rate_limit":
     case "over_request_rate_limit":
       return "尝试次数过多，请稍后再试。Too many attempts. Please try again later.";
+    case "email_address_invalid":
+    case "validation_failed":
+      return "请输入有效的邮箱地址。Please enter a valid email address.";
+    case "phone_provider_disabled":
+      return "暂不支持手机号注册，请使用邮箱。Phone registration is not available; please use email.";
     default:
       return fallback;
   }

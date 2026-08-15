@@ -19,9 +19,9 @@ export const profileSchema = z
 export const registerSchema = profileSchema
   .omit({ nickname: true })
   .extend({
-    identifierType: z.enum(["gmail", "phone", "student_id"]),
-    identifier: z.string().trim().min(2).max(254),
-    password: z.string().min(1).max(128),
+    identifierType: z.literal("gmail"),
+    identifier: z.email().max(254),
+    password: z.string().min(8).max(128),
     identityMode: z.enum(["real_name", "anonymous"]),
     displayName: z.string().trim().max(30).optional().default(""),
   })

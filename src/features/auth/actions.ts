@@ -54,13 +54,11 @@ export async function registerAction(
     },
     emailRedirectTo: origin ? `${origin}/auth/confirm` : undefined,
   };
-  const { data, error } = parsed.data.identifierType === "phone"
-    ? await supabase.auth.signUp({ phone: normalizePhone(parsed.data.identifier), password: parsed.data.password, options: authOptions })
-    : await supabase.auth.signUp({
-        email: parsed.data.identifierType === "student_id" ? studentIdEmail(parsed.data.identifier) : parsed.data.identifier,
-        password: parsed.data.password,
-        options: authOptions,
-      });
+  const { data, error } = await supabase.auth.signUp({
+    email: parsed.data.identifier,
+    password: parsed.data.password,
+    options: authOptions,
+  });
 
   if (error || !data.user) {
     return { ok: false, message: friendlyAuthError(error?.code, "暂时无法创建账号。Unable to create the account right now.") };

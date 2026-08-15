@@ -7,6 +7,8 @@ describe("safe authentication feedback", () => {
     expect(friendlyAuthError("invalid_credentials")).toContain("Invalid");
     expect(friendlyAuthError("email_not_confirmed")).toContain("confirm your email");
     expect(friendlyAuthError("user_already_exists")).toContain("already exists");
+    expect(friendlyAuthError("email_address_invalid")).toContain("valid email");
+    expect(friendlyAuthError("phone_provider_disabled")).toContain("use email");
     expect(friendlyAuthError("unexpected_internal_provider_detail")).toBe("暂时无法完成操作。Please try again.");
   });
 });
