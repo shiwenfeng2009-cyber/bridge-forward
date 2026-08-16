@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import {
   loginAction,
   registerAction,
+  resendConfirmationAction,
 } from "@/features/auth/actions";
 import { initialAuthActionState } from "@/features/auth/state";
 
@@ -17,18 +18,20 @@ export function AuthActionForm({
 }) {
   const action = mode === "login" ? loginAction : registerAction;
   const [state, formAction, pending] = useActionState(action, initialAuthActionState);
+  const [resendState, resendFormAction, resendPending] = useActionState(resendConfirmationAction, initialAuthActionState);
   const [confirmationMessage, setConfirmationMessage] = useState("");
 
   useEffect(() => {
     if (mode === "login" && new URLSearchParams(window.location.search).get("auth") === "confirmed") {
       setConfirmationMessage("邮箱已确认，请登录。Email confirmed—please sign in.");
     }
-    if (reopenModalOnResult && state.message) {
+    if (reopenModalOnResult && (state.message || resendState.message)) {
       window.location.hash = mode === "login" ? "sign-in" : "create-account";
     }
-  }, [mode, reopenModalOnResult, state.message]);
+  }, [mode, reopenModalOnResult, resendState.message, state.message]);
 
-  const visibleMessage = state.message || confirmationMessage;
+  const visibleMessage = state.message || resendState.message || confirmationMessage;
+  const visibleMessageIsSuccess = state.ok || resendState.ok || Boolean(confirmationMessage);
 
   return (
     <form action={formAction} className={`auth-modal__form${mode === "register" ? " auth-modal__form--register" : ""}`}>
@@ -50,13 +53,18 @@ export function AuthActionForm({
         </>
       )}
       {visibleMessage && (
-        <p aria-live="polite" className={`auth-modal__message${state.ok || confirmationMessage ? " auth-modal__message--success" : ""}`} role="status">
+        <p aria-live="polite" className={`auth-modal__message${visibleMessageIsSuccess ? " auth-modal__message--success" : ""}`} role="status">
           {visibleMessage}
         </p>
       )}
       <button disabled={pending} type="submit">
         {pending ? "请稍候 / Please wait…" : mode === "login" ? "登录 / Sign in" : "创建账号 / Create account"}
       </button>
+      {mode === "login" && (
+        <button className="auth-modal__resend" disabled={resendPending} formAction={resendFormAction} formNoValidate type="submit">
+          {resendPending ? "正在发送… / Sending…" : "没收到确认邮件？重新发送 / Resend confirmation"}
+        </button>
+      )}
     </form>
   );
 }

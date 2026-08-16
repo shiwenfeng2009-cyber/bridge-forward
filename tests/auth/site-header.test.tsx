@@ -14,6 +14,7 @@ describe("SiteHeader authentication state", () => {
     expect(screen.getByRole("link", { name: "登录 Sign in" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "创建账号 Create" })).toBeInTheDocument();
     expect(screen.getAllByRole("dialog")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "没收到确认邮件？重新发送 / Resend confirmation" })).toBeInTheDocument();
   });
 
   it("guides confirmed email users back to sign in", () => {

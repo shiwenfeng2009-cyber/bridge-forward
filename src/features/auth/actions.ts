@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,6 +25,16 @@ function normalizePhone(identifier: string) {
   return identifier.trim().replace(/[^\d+]/g, "");
 }
 
+async function authRedirectOrigin(formData: FormData) {
+  const configured = formValue(formData, "origin") || process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) return configured.replace(/\/$/, "");
+
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") || (process.env.NODE_ENV === "production" ? "https" : "http");
+  return host ? `${protocol}://${host}` : "";
+}
+
 export async function registerAction(
   _previousState: AuthActionState,
   formData: FormData,
@@ -41,7 +53,7 @@ export async function registerAction(
   if (!parsed.success) return { ok: false, message: "请检查必填信息。Please check the required fields." };
 
   const supabase = await createClient();
-  const origin = formValue(formData, "origin") || process.env.NEXT_PUBLIC_SITE_URL || "";
+  const origin = await authRedirectOrigin(formData);
   const nickname = parsed.data.displayName || "匿名同学";
   const authOptions = {
     data: {
@@ -81,6 +93,33 @@ export async function registerAction(
     message: data.session
       ? "账号创建成功，已登录。Account created and signed in."
       : "注册成功！请检查邮箱并点击确认链接。Registration successful—check your email to continue.",
+  };
+}
+
+export async function resendConfirmationAction(
+  _previousState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const parsedEmail = z.email().max(254).safeParse(formValue(formData, "identifier").trim());
+  if (!parsedEmail.success) {
+    return { ok: false, message: "请输入有效的邮箱地址。Please enter a valid email address." };
+  }
+
+  const supabase = await createClient();
+  const origin = await authRedirectOrigin(formData);
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: parsedEmail.data,
+    options: { emailRedirectTo: origin ? `${origin}/auth/confirm` : undefined },
+  });
+
+  if (error?.code === "over_email_send_rate_limit" || error?.code === "over_request_rate_limit") {
+    return { ok: false, message: friendlyAuthError(error.code) };
+  }
+
+  return {
+    ok: true,
+    message: "如果该账号正在等待验证，我们已重新发送确认邮件。请检查收件箱和垃圾邮件。If this account is awaiting verification, a new confirmation email has been sent.",
   };
 }
 
