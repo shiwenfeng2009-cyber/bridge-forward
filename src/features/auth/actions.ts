@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -25,14 +24,9 @@ function normalizePhone(identifier: string) {
   return identifier.trim().replace(/[^\d+]/g, "");
 }
 
-async function authRedirectOrigin(formData: FormData) {
+function authRedirectOrigin(formData: FormData) {
   const configured = formValue(formData, "origin") || process.env.NEXT_PUBLIC_SITE_URL;
-  if (configured) return configured.replace(/\/$/, "");
-
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
-  const protocol = requestHeaders.get("x-forwarded-proto") || (process.env.NODE_ENV === "production" ? "https" : "http");
-  return host ? `${protocol}://${host}` : "";
+  return configured ? configured.replace(/\/$/, "") : "";
 }
 
 export async function registerAction(
@@ -53,7 +47,7 @@ export async function registerAction(
   if (!parsed.success) return { ok: false, message: "请检查必填信息。Please check the required fields." };
 
   const supabase = await createClient();
-  const origin = await authRedirectOrigin(formData);
+  const origin = authRedirectOrigin(formData);
   const nickname = parsed.data.displayName || "匿名同学";
   const authOptions = {
     data: {
@@ -106,7 +100,7 @@ export async function resendConfirmationAction(
   }
 
   const supabase = await createClient();
-  const origin = await authRedirectOrigin(formData);
+  const origin = authRedirectOrigin(formData);
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsedEmail.data,
