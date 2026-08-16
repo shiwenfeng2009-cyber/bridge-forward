@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -90,37 +89,34 @@ export async function registerAction(
   };
 }
 
-export async function resendConfirmationAction(
-  _previousState: AuthActionState,
-  formData: FormData,
-): Promise<AuthActionState> {
-  const parsedEmail = z.email().max(254).safeParse(formValue(formData, "identifier").trim());
-  if (!parsedEmail.success) {
-    return { ok: false, message: "请输入有效的邮箱地址。Please enter a valid email address." };
-  }
-
-  const supabase = await createClient();
-  const origin = authRedirectOrigin(formData);
-  const { error } = await supabase.auth.resend({
-    type: "signup",
-    email: parsedEmail.data,
-    options: { emailRedirectTo: origin ? `${origin}/auth/confirm` : undefined },
-  });
-
-  if (error?.code === "over_email_send_rate_limit" || error?.code === "over_request_rate_limit") {
-    return { ok: false, message: friendlyAuthError(error.code) };
-  }
-
-  return {
-    ok: true,
-    message: "如果该账号正在等待验证，我们已重新发送确认邮件。请检查收件箱和垃圾邮件。If this account is awaiting verification, a new confirmation email has been sent.",
-  };
-}
-
 export async function loginAction(
   _previousState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  if (formValue(formData, "intent") === "resend") {
+    const email = formValue(formData, "identifier").trim();
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { ok: false, message: "请输入有效的邮箱地址。Please enter a valid email address." };
+    }
+
+    const supabase = await createClient();
+    const origin = authRedirectOrigin(formData);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: origin ? `${origin}/auth/confirm` : undefined },
+    });
+
+    if (error?.code === "over_email_send_rate_limit" || error?.code === "over_request_rate_limit") {
+      return { ok: false, message: friendlyAuthError(error.code) };
+    }
+
+    return {
+      ok: true,
+      message: "如果该账号正在等待验证，我们已重新发送确认邮件。请检查收件箱和垃圾邮件。If this account is awaiting verification, a new confirmation email has been sent.",
+    };
+  }
+
   const parsed = loginSchema.safeParse({
     identifierType: formValue(formData, "identifierType"),
     identifier: formValue(formData, "identifier"),
