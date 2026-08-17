@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { updateProfileAction } from "@/features/auth/actions";
 import { getUserDisplayName, getUserInitial } from "@/features/auth/profile";
@@ -13,7 +13,17 @@ export default async function AccountPage({
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in?next=/account");
+  if (!user) {
+    return (
+      <main className="section-page account-page">
+        <section className="account-card notice-card">
+          <h1>请先登录 / Sign in required</h1>
+          <p>登录后才能查看和编辑你的个人资料。</p>
+          <Link className="account-back-link" href="/sign-in">登录 / Sign in</Link>
+        </section>
+      </main>
+    );
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

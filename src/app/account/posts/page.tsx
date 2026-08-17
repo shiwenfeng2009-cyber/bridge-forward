@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,7 +7,17 @@ export const dynamic = "force-dynamic";
 export default async function MyPostsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in?next=/account/posts");
+  if (!user) {
+    return (
+      <main className="section-page account-page">
+        <section className="account-card notice-card">
+          <h1>请先登录 / Sign in required</h1>
+          <p>登录后才能查看你的发布内容。</p>
+          <Link className="account-back-link" href="/sign-in">登录 / Sign in</Link>
+        </section>
+      </main>
+    );
+  }
 
   const [{ data: questions }, { data: stories }] = await Promise.all([
     supabase.from("questions").select("id,title,status,created_at").eq("author_id", user.id).order("created_at", { ascending: false }),
