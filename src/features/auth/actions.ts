@@ -23,9 +23,9 @@ function normalizePhone(identifier: string) {
   return identifier.trim().replace(/[^\d+]/g, "");
 }
 
-function authRedirectOrigin(formData: FormData) {
-  const configured = formValue(formData, "origin") || process.env.NEXT_PUBLIC_SITE_URL;
-  return configured ? configured.replace(/\/$/, "") : "";
+function authRedirectOrigin() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  return configured || "https://bridge-forward.shiwenfeng2009.workers.dev";
 }
 
 export async function registerAction(
@@ -46,7 +46,7 @@ export async function registerAction(
   if (!parsed.success) return { ok: false, message: "请检查必填信息。Please check the required fields." };
 
   const supabase = await createClient();
-  const origin = authRedirectOrigin(formData);
+  const origin = authRedirectOrigin();
   const nickname = parsed.data.displayName || "匿名同学";
   const authOptions = {
     data: {
@@ -100,7 +100,7 @@ export async function loginAction(
     }
 
     const supabase = await createClient();
-    const origin = authRedirectOrigin(formData);
+    const origin = authRedirectOrigin();
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,

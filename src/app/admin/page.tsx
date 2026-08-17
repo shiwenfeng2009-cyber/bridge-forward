@@ -15,6 +15,7 @@ export default async function AdminPage() {
   const { data: profile } = await supabase.from("profiles").select("role,nickname").eq("id", user.id).single();
   if (!canModerate(profile?.role)) return <main className="admin-console"><div className="notice-card">此账号尚未获得管理员权限。</div></main>;
 
+  // eslint-disable-next-line react-hooks/purity -- Server request time anchors the rolling moderation window.
   const since = new Date(Date.now() - 30 * 86400000).toISOString();
   const [{ count: members }, { count: views }, { data: recentViews }, ...queueResults] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),

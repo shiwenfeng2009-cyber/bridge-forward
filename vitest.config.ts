@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    exclude: ["**/node_modules/**", "**/.git/**", "**/.codex-deploy-stable/**", "**/.pnpm-store/**"],
     setupFiles: ["./src/test/setup.ts"],
   },
   resolve: {

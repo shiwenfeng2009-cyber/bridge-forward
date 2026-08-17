@@ -9,19 +9,12 @@ function renderHeader(user?: { initial: string; label: string } | null) {
 }
 
 describe("SiteHeader authentication state", () => {
-  it("shows authentication actions and modals to signed-out visitors", () => {
+  it("shows authentication links without embedding credential forms in public pages", () => {
     renderHeader(null);
-    expect(screen.getByRole("link", { name: "登录 Sign in" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "创建账号 Create" })).toBeInTheDocument();
-    expect(screen.getAllByRole("dialog")).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "没收到确认邮件？重新发送 / Resend confirmation" })).toBeInTheDocument();
-  });
-
-  it("guides confirmed email users back to sign in", () => {
-    window.history.replaceState({}, "", "/?auth=confirmed#sign-in");
-    renderHeader(null);
-    expect(screen.getByText("邮箱已确认，请登录。Email confirmed—please sign in.")).toBeInTheDocument();
-    window.history.replaceState({}, "", "/");
+    expect(screen.getByRole("link", { name: "登录 Sign in" })).toHaveAttribute("href", "/sign-in");
+    expect(screen.getByRole("link", { name: "创建账号 Create" })).toHaveAttribute("href", "/register");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
   });
 
   it("shows the authenticated account menu and hides guest controls", () => {

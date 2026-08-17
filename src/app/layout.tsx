@@ -11,7 +11,7 @@ import "./globals.css";
 import "./home-final.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://bridge-forward-students.shiwenfeng2009.chatgpt.site"),
+  metadataBase: new URL("https://bridge-forward.shiwenfeng2009.workers.dev"),
   title: "Bridge Forward｜中国留学生校园同行社区",
   description: "为初到美国的中国学生提供校园信息、美国教育体系指南、同伴论坛与心理支持。",
   keywords: ["Bridge Forward", "Moanalua High School", "中国留学生", "校园指南", "学生心理支持"],

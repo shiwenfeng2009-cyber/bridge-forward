@@ -21,6 +21,7 @@ export default function MentalWellnessExperience(){
   const [lights,setLights]=useState(0); const [query,setQuery]=useState(""); const [open,setOpen]=useState<number|null>(null);
   const [storyFilter,setStoryFilter]=useState("All"); const [showLights,setShowLights]=useState(false); const [sharedStories,setSharedStories]=useState<typeof stories>([]);
   const [translatedEntry,setTranslatedEntry]=useState("");
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate the user's local-only journal after mount.
   useEffect(()=>{ const saved=localStorage.getItem("bridge-private-diary"); if(saved) setEntry(saved); const n=localStorage.getItem("bridge-lights"); if(n) setLights(Number(n)); try{const raw=localStorage.getItem("bridge-anonymous-stories");if(raw)setSharedStories(JSON.parse(raw));}catch{} },[]);
   const allStories=useMemo(()=>[...sharedStories,...stories],[sharedStories]);
   const anonymousLights=sharedStories;

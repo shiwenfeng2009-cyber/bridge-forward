@@ -1,0 +1,35 @@
+name: Build OpenNext artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - codex/restore-original-website
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec opennextjs-cloudflare build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://bridge-forward.shiwenfeng2009.workers.dev
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-forward-opennext
+          path: .open-next
+          include-hidden-files: true
+          if-no-files-found: error

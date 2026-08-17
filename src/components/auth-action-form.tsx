@@ -17,12 +17,14 @@ export function AuthActionForm({
 }) {
   const action = mode === "login" ? loginAction : registerAction;
   const [state, formAction, pending] = useActionState(action, initialAuthActionState);
-  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [confirmationMessage] = useState(() => {
+    if (typeof window === "undefined" || mode !== "login") return "";
+    return new URLSearchParams(window.location.search).get("auth") === "confirmed"
+      ? "邮箱已确认，请登录。Email confirmed—please sign in."
+      : "";
+  });
 
   useEffect(() => {
-    if (mode === "login" && new URLSearchParams(window.location.search).get("auth") === "confirmed") {
-      setConfirmationMessage("邮箱已确认，请登录。Email confirmed—please sign in.");
-    }
     if (reopenModalOnResult && state.message) {
       window.location.hash = mode === "login" ? "sign-in" : "create-account";
     }

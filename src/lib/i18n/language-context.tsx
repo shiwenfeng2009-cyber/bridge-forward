@@ -29,6 +29,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = window.localStorage.getItem("bridge-secondary-language") as LanguageMode | null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Restore the visitor's persisted language after hydration.
     if (saved === "zh" || saved === "ja" || saved === "ko" || saved === "fil") setModeState(saved);
   }, []);
 
