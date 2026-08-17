@@ -165,7 +165,7 @@ export async function updateProfileAction(formData: FormData): Promise<void> {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/?auth=required#sign-in");
+  if (!user) redirect("/sign-in?next=/account");
 
   const { error } = await supabase.from("profiles").update({
     nickname: parsed.data.nickname,

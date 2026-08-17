@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function MyPostsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/?auth=required#sign-in");
+  if (!user) redirect("/sign-in?next=/account/posts");
 
   const [{ data: questions }, { data: stories }] = await Promise.all([
     supabase.from("questions").select("id,title,status,created_at").eq("author_id", user.id).order("created_at", { ascending: false }),
