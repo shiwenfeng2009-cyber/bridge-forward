@@ -33,6 +33,19 @@ describe("auth and profile schemas", () => {
     expect(registerSchema.safeParse({ ...base, identifierType: "gmail", identifier: "not-an-email" }).success).toBe(false);
   });
 
+  it("normalizes a valid registration email before creating the account", () => {
+    const result = registerSchema.parse({
+      identifierType: "gmail",
+      identifier: "  New.Student@Example.COM  ",
+      password: "safe-password-123",
+      identityMode: "anonymous",
+      displayName: "IslandBridge",
+      nativeLanguage: "Chinese",
+    });
+
+    expect(result.identifier).toBe("new.student@example.com");
+  });
+
   it("allows grade and interests as optional profile fields", () => {
     const result = profileSchema.safeParse({
       nickname: "NewPath",

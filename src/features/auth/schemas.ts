@@ -20,7 +20,7 @@ export const registerSchema = profileSchema
   .omit({ nickname: true })
   .extend({
     identifierType: z.literal("gmail"),
-    identifier: z.email().max(254),
+    identifier: z.string().trim().toLowerCase().email().max(254),
     password: z.string().min(8).max(128),
     identityMode: z.enum(["real_name", "anonymous"]),
     displayName: z.string().trim().max(30).optional().default(""),
@@ -38,7 +38,7 @@ export const loginSchema = z
 export const supporterApplicationSchema = z
   .object({
     role: z.enum(["teacher", "counselor", "club_advisor", "school_staff"]),
-    schoolEmail: z.email().max(254),
+    schoolEmail: z.string().trim().toLowerCase().email().max(254),
     note: z.string().trim().max(500).optional(),
   })
   .strict();
