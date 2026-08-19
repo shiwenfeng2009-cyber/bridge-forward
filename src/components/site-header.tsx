@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- Native hash navigation is required so :target opens the homepage auth dialogs. */
 import Link from "next/link";
 
 import { AccountMenu } from "@/components/account-menu";
@@ -12,13 +13,13 @@ function AuthModal({ mode }: { mode: "login" | "register" }) {
   return (
     <div className="auth-modal auth-modal--target" id={id}>
       <section aria-labelledby={`${id}-title`} aria-modal="true" className="auth-modal__panel" role="dialog">
-        <Link aria-label="关闭账号窗口" className="auth-modal__close" href="/">×</Link>
+        <a aria-label="关闭账号窗口" className="auth-modal__close" href="/">×</a>
         <p className="auth-modal__eyebrow">BRIDGE FORWARD ACCOUNT</p>
         <h2 id={`${id}-title`}>{mode === "login" ? "欢迎回来" : "创建你的账号"}</h2>
         <p>{mode === "login" ? "使用邮箱登录并继续。" : "使用昵称保护身份，并创建你的社区账号。"}</p>
         <div aria-label="账号操作" className="auth-modal__tabs" role="tablist">
-          <Link aria-selected={mode === "login"} href="/#sign-in" role="tab">登录 <small>Sign in</small></Link>
-          <Link aria-selected={mode === "register"} href="/#create-account" role="tab">创建账号 <small>Create account</small></Link>
+          <a aria-selected={mode === "login"} href="/#sign-in" role="tab">登录 <small>Sign in</small></a>
+          <a aria-selected={mode === "register"} href="/#create-account" role="tab">创建账号 <small>Create account</small></a>
         </div>
         <AuthActionForm mode={mode} reopenModalOnResult />
       </section>
@@ -42,8 +43,8 @@ export function SiteHeader({ user = null }: { user?: HeaderUser | null }) {
               <AccountMenu initial={user.initial} label={user.label} />
             ) : (
               <>
-                <Link className="header-auth-button header-auth-button--ghost" href="/#sign-in">登录 <small>Sign in</small></Link>
-                <Link className="header-auth-button header-auth-button--solid" href="/#create-account">创建账号 <small>Create</small></Link>
+                <a className="header-auth-button header-auth-button--ghost" href="/#sign-in">登录 <small>Sign in</small></a>
+                <a className="header-auth-button header-auth-button--solid" href="/#create-account">创建账号 <small>Create</small></a>
               </>
             )}
           </div>
