@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   // Auth domain before redirecting here, so there is no code/token to exchange.
   // In that flow the account is active, but the user still needs to sign in.
   if (!code && !(tokenHash && type)) {
-    return NextResponse.redirect(new URL("/sign-in?auth=confirmed", request.url));
+    return NextResponse.redirect(new URL("/?auth=confirmed#sign-in", request.url));
   }
 
   const supabase = await createClient();
@@ -42,5 +42,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(next, request.url));
   }
 
-  return NextResponse.redirect(new URL("/sign-in?auth=confirmation-error", request.url));
+  return NextResponse.redirect(new URL("/?auth=confirmation-error#sign-in", request.url));
 }

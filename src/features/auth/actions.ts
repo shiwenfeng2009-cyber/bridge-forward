@@ -151,7 +151,7 @@ export async function loginAction(
   }, { onConflict: "id", ignoreDuplicates: true });
 
   revalidatePath("/", "layout");
-  redirect("/ask?auth=logged-in");
+  redirect("/?auth=logged-in");
 }
 
 export async function updateProfileAction(formData: FormData): Promise<void> {
@@ -165,7 +165,7 @@ export async function updateProfileAction(formData: FormData): Promise<void> {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in?next=/account");
+  if (!user) redirect("/?next=/account#sign-in");
 
   const { error } = await supabase.from("profiles").update({
     nickname: parsed.data.nickname,

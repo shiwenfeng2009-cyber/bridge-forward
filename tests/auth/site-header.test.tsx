@@ -9,12 +9,12 @@ function renderHeader(user?: { initial: string; label: string } | null) {
 }
 
 describe("SiteHeader authentication state", () => {
-  it("shows authentication links without embedding credential forms in public pages", () => {
+  it("keeps signed-out authentication on the homepage", () => {
     renderHeader(null);
-    expect(screen.getByRole("link", { name: "登录 Sign in" })).toHaveAttribute("href", "/sign-in");
-    expect(screen.getByRole("link", { name: "创建账号 Create" })).toHaveAttribute("href", "/register");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "登录 Sign in" })).toHaveAttribute("href", "/#sign-in");
+    expect(screen.getByRole("link", { name: "创建账号 Create" })).toHaveAttribute("href", "/#create-account");
+    expect(screen.getAllByRole("dialog")).toHaveLength(2);
+    expect(screen.getAllByLabelText(/Password/)).toHaveLength(2);
   });
 
   it("shows the authenticated account menu and hides guest controls", () => {
