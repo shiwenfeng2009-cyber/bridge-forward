@@ -1,5 +1,6 @@
 import { getApprovedStoryCards } from "@/features/community/public-data";
 import { StorySubmissionForm } from "@/features/community/story-submission-form";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function AskStoriesPage() {
                 <h2>{story.title}</h2>
                 <p>{story.body}</p>
                 <small>{story.authorLabel}</small>
+                {!story.id.startsWith("sample-") && <Link href={`/ask/stories/${story.id}`}>Read · 阅读</Link>}
               </div>
               <span aria-hidden="true">→</span>
             </article>

@@ -39,8 +39,8 @@ export async function getPublicCommunityFeed(): Promise<PublicFeedItem[]> {
   try {
     const supabase = await createClient();
     const [{ data: questions, error: questionError }, { data: replies, error: replyError }] = await Promise.all([
-      supabase.from("questions").select("id,body,category,display_name,created_at").eq("status", "approved").order("created_at", { ascending: true }).limit(100),
-      supabase.from("replies").select("id,question_id,body,display_name,created_at").eq("status", "approved").order("created_at", { ascending: true }).limit(100),
+      supabase.from("questions").select("id,body,category,display_name,created_at").eq("status", "approved").order("created_at", { ascending: false }).limit(100),
+      supabase.from("replies").select("id,question_id,body,display_name,created_at").eq("status", "approved").order("created_at", { ascending: false }).limit(100),
     ]);
     if (questionError || replyError) return [];
     const questionRows = (questions ?? []) as FeedQuestionRow[];
@@ -66,10 +66,25 @@ export async function getPublicCommunityFeed(): Promise<PublicFeedItem[]> {
         category: categoryByQuestion.get(reply.question_id) || "other",
         isQuestion: false,
       })),
-    ].sort((a, b) => a.time.localeCompare(b.time));
+    ].sort((a, b) => b.time.localeCompare(a.time));
   } catch {
     return [];
   }
+}
+
+export async function getPublicQuestion(id: string) {
+  const supabase = await createClient();
+  const [{ data: question }, { data: replies }] = await Promise.all([
+    supabase.from("questions").select("id,title,body,category,display_name,created_at").eq("id", id).eq("status", "approved").maybeSingle(),
+    supabase.from("replies").select("id,body,display_name,created_at").eq("question_id", id).eq("status", "approved").order("created_at", { ascending: true }),
+  ]);
+  return question ? { question, replies: replies ?? [] } : null;
+}
+
+export async function getPublicStory(id: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("stories").select("id,title,body,display_name,publish_as_anonymous,created_at").eq("id", id).eq("status", "approved").maybeSingle();
+  return data;
 }
 
 export async function getApprovedQuestionCards(): Promise<PublicCard[]> {
