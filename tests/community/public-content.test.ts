@@ -31,7 +31,7 @@ describe("public community content", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0]).toMatchObject({
       id: "approved-1",
-      authorLabel: "Anonymous Student",
+      authorLabel: "匿名同学 / Anonymous",
     });
   });
 
@@ -58,6 +58,6 @@ describe("public community content", () => {
     ]);
 
     expect(cards).toHaveLength(1);
-    expect(cards[0]?.authorLabel).toBe("Anonymous Student");
+    expect(cards[0]?.authorLabel).toBe("匿名同学 / Anonymous");
   });
 });

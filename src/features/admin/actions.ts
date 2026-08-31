@@ -75,6 +75,8 @@ export async function moderateContentAction(
   });
 
   revalidatePath("/admin");
+  if (targetTable === "questions" || targetTable === "replies") revalidatePath("/ask/questions");
+  if (targetTable === "stories") revalidatePath("/ask/stories");
   return {
     ok: true,
     message: "审核状态已更新。Moderation status updated.",

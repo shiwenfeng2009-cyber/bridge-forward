@@ -37,7 +37,7 @@ export const questionSchema = z
     title: z.string().trim().min(8).max(120),
     body: safePublicText.max(1800),
     language: contentLanguageSchema,
-    status: moderationStatusSchema.default("pending"),
+    status: moderationStatusSchema.default("approved"),
   })
   .strict();
 
@@ -47,7 +47,7 @@ export const storySchema = z
     body: safePublicText,
     language: contentLanguageSchema,
     publishAsAnonymous: z.boolean().default(true),
-    status: moderationStatusSchema.default("pending"),
+    status: moderationStatusSchema.default("approved"),
   })
   .strict();
 
@@ -56,7 +56,8 @@ export function getInitialReplyStatus({
 }: {
   approvedReplyCount: number;
 }) {
-  return approvedReplyCount >= 3 ? "approved" : "pending";
+  void approvedReplyCount;
+  return "approved";
 }
 
 export const replySchema = z
@@ -80,7 +81,7 @@ export function publicAuthorLabel({
   anonymous: boolean;
   nickname: string;
 }) {
-  return anonymous ? "Anonymous Student" : nickname;
+  return anonymous ? "匿名同学 / Anonymous" : nickname;
 }
 
 export type ModerationStatus = z.infer<typeof moderationStatusSchema>;

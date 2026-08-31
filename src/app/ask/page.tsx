@@ -57,8 +57,8 @@ export default function AskPage() {
 
       <aside className="notice-card notice-card--soft">
         <p>
-          第一版会继续审核问题、故事和新用户前几条回复。这样论坛会更安全，也更适合刚来的、
-          比较内向的学生慢慢开口。
+          普通问题、故事和回复会在提交成功后公开显示。管理员仍可处理举报并移除不安全内容。
+          Public community posts appear after a successful submission and can still be moderated if reported.
         </p>
       </aside>
     </main>

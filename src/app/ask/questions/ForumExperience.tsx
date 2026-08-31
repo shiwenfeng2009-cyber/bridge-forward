@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import { submitQuestionAction, submitReplyAction } from "@/features/community/actions";
+import type { PublicFeedItem } from "@/features/community/public-data";
 
 type Question = { id:string; title:string; zh:string; body:string; category:string; answers:number; time:string; badge:string; answered:boolean; mine?:boolean };
 type Reply = { id:string; author:string; role:string; text:string; time:string; mine?:boolean };
-type FeedMessage = { id:string; author:string; role:string; text:string; time:string; category:string; mine?:boolean; replyTo?:string };
+type FeedMessage = { id:string; questionId?:string; author:string; role:string; text:string; time:string; category:string; mine?:boolean; replyTo?:string; isQuestion?:boolean };
 
 const seed: Question[] = [
   {id:"graduate",title:"How do I know if I’m on track to graduate?",zh:"我怎么知道自己能否按时毕业？",body:"I’m still learning how credits and graduation requirements work. Who should I ask to review my progress?",category:"Classes & Grades",answers:3,time:"2h ago",badge:"Student Answer",answered:true},
@@ -42,27 +44,43 @@ const feedTranslations: Record<string,string> = {
   m7:"Club Fair is a good place to look around. Tell me what you like and I can help you search.", m8:"Reminder: confirm official graduation requirements and schedules with your assigned counselor.",
 };
 
-export default function ForumExperience(){
+const categoryValues: Record<string, string> = {
+  "Classes & Grades": "school_rules",
+  "Friends & Belonging": "making_friends",
+  "English & Communication": "english_confidence",
+  "School Life": "culture_shock",
+  "College & Future": "sat_ap_college",
+  Other: "feeling_lost",
+};
+
+function publicFeedMessage(item: PublicFeedItem): FeedMessage {
+  return {
+    ...item,
+    category: Object.entries(categoryValues).find(([, value]) => value === item.category)?.[0] || "Other",
+    time: new Date(item.time).toLocaleString(),
+  };
+}
+
+export default function ForumExperience({ publicFeed }: { publicFeed: PublicFeedItem[] }){
   const router=useRouter();
-  const [questions,setQuestions]=useState<Question[]>(seed); const [popularOpen,setPopularOpen]=useState<string|null>(null);
-  const [feed,setFeed]=useState<FeedMessage[]>(initialFeed); const [replyDraft,setReplyDraft]=useState("");
+  const [popularOpen,setPopularOpen]=useState<string|null>(null);
+  const feed=useMemo<FeedMessage[]>(()=>[...initialFeed,...publicFeed.map(publicFeedMessage)],[publicFeed]); const [replyDraft,setReplyDraft]=useState("");
+  const [replyTargetId,setReplyTargetId]=useState(publicFeed.find((item)=>item.isQuestion)?.questionId ?? "");
   const [autoTranslate,setAutoTranslate]=useState(true);
   const [query,setQuery]=useState(""); const [category,setCategory]=useState("All");
-  const [mode,setMode]=useState<"Anonymous"|"Nickname">("Anonymous"); const [text,setText]=useState(""); const [postCategory,setPostCategory]=useState(categories[0]); const [notice,setNotice]=useState("");
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate the user's local-only forum drafts after mount.
-  useEffect(()=>{try{const saved=localStorage.getItem("bridge-forward-forum");if(saved){const local=(JSON.parse(saved) as Question[]).filter(q=>q.title!=="Too short");setQuestions([...local,...seed]);setFeed([...local.reverse().map(q=>({id:`feed-${q.id}`,author:"You",role:"My question · 我的问题",text:q.body,time:q.time,category:q.category,mine:true})),...initialFeed])}}catch{}},[]);
+  const [mode,setMode]=useState<"Anonymous"|"Nickname">("Anonymous"); const [nickname,setNickname]=useState(""); const [text,setText]=useState(""); const [postCategory,setPostCategory]=useState(categories[0]); const [notice,setNotice]=useState("");
   const visibleFeed=useMemo(()=>feed.filter(m=>(category==="All"||m.category===category)&&`${m.author} ${m.text} ${m.category}`.toLowerCase().includes(query.toLowerCase())),[feed,query,category]);
-  function publish(e:FormEvent){e.preventDefault();const clean=text.trim();if(clean.length<12){setNotice("请至少写 12 个字，让大家更容易理解你的问题。 / Please add a little more detail.");return;}const item:Question={id:`local-${Date.now()}`,title:clean.length>64?`${clean.slice(0,64)}…`:clean,zh:"我发布的问题",body:clean,category:postCategory,answers:0,time:"Just now",badge:mode==="Anonymous"?"Anonymous Student":"Community Nickname",answered:false,mine:true};const local=[item,...questions.filter(q=>q.id.startsWith("local-")&&q.title!=="Too short")];localStorage.setItem("bridge-forward-forum",JSON.stringify(local));setQuestions([item,...questions.filter(q=>q.title!=="Too short")]);setFeed(f=>[...f,{id:`feed-${item.id}`,author:"You",role:"My question · 我的问题",text:clean,time:"Just now",category:postCategory,mine:true}]);setText("");setNotice("发布成功！你的问题已出现在聊天广场。 / Your question is now visible in the campus chat.");}
-  function sendReply(e:FormEvent){e.preventDefault();const clean=replyDraft.trim();if(!clean)return;setFeed(f=>[...f,{id:`message-${Date.now()}`,author:"You",role:mode==="Anonymous"?"Anonymous reply · 匿名回复":"Nickname reply · 昵称回复",text:clean,time:"Just now",category:"Other",mine:true}]);setReplyDraft("");}
+  async function publish(e:FormEvent){e.preventDefault();const clean=text.trim();if(clean.length<12){setNotice("请至少写 12 个字，让大家更容易理解你的问题。 / Please add a little more detail.");return;}if(mode==="Nickname"&&nickname.trim().length<2){setNotice("请填写至少 2 个字的昵称。Please enter a nickname with at least 2 characters.");return;}const formData=new FormData();formData.set("category",categoryValues[postCategory]||"feeling_lost");formData.set("title",clean.length>120?`${clean.slice(0,117)}...`:clean);formData.set("body",clean);formData.set("language","bilingual");formData.set("displayName",mode==="Anonymous"?"匿名同学 / Anonymous":nickname.trim());const result=await submitQuestionAction({ok:false,message:""},formData);setNotice(result.message);if(result.ok){setText("");router.refresh();}}
+  async function sendReply(e:FormEvent){e.preventDefault();const clean=replyDraft.trim();const target=replyTargetId||[...publicFeed].reverse().find((item)=>item.isQuestion)?.questionId||"";const formData=new FormData();formData.set("questionId",target);formData.set("body",clean);const result=await submitReplyAction({ok:false,message:""},formData);setNotice(result.message);if(result.ok){setReplyDraft("");router.refresh();}}
   return <main className="peer-forum-page"><div className="peer-forum-shell">
     <button className="peer-forum-back" type="button" onClick={()=>window.history.length>1?router.back():router.push("/")}>← <span>Back · 返回上一页</span></button>
     <header className="peer-forum-hero"><div><h1>Ask &amp; Connect <em>♥</em></h1><p>Got questions? You’re not alone.<br/>Ask, share, and learn from each other.</p><p>有问题很正常，这里可以匿名提问，<br/>也可以阅读他人的经验与建议。</p></div><img src="/images/forum-students-hero-hd.png" alt="Students talking together on campus"/></header>
     <div className="peer-forum-grid"><div className="peer-forum-left">
-      <section className="forum-glass-card forum-compose"><h2>Ask Your Question <span>提出问题</span></h2><small>Your question is important. We’re here to help.</small><div className="forum-mode" role="group" aria-label="Posting identity"><button className={mode==="Anonymous"?"active":""} onClick={()=>setMode("Anonymous")} type="button">Ask Anonymously 匿名提问</button><button className={mode==="Nickname"?"active":""} onClick={()=>setMode("Nickname")} type="button">Post with a Nickname 使用昵称</button></div><form onSubmit={publish}><textarea maxLength={500} onChange={e=>setText(e.target.value)} placeholder="What’s on your mind?  你想问什么？" value={text}/><span className="forum-count">{text.length}/500</span><div className="forum-category-picker">{categories.map(c=><button className={postCategory===c?"active":""} onClick={()=>setPostCategory(c)} type="button" key={c}>{c}</button>)}</div><button className="forum-post" type="submit">Post Question　发布问题　➤</button>{notice&&<p className="forum-notice" role="status">{notice}</p>}</form><p className="forum-respect">All questions should protect privacy and remain respectful.<br/>请勿填写真实姓名、电话、课表或其他私人信息。</p></section>
+      <section className="forum-glass-card forum-compose"><h2>Ask Your Question <span>提出问题</span></h2><small>Your question is important. We’re here to help.</small><div className="forum-mode" role="group" aria-label="Posting identity"><button className={mode==="Anonymous"?"active":""} onClick={()=>setMode("Anonymous")} type="button">Ask Anonymously 匿名提问</button><button className={mode==="Nickname"?"active":""} onClick={()=>setMode("Nickname")} type="button">Post with a Nickname 使用昵称</button></div><form onSubmit={publish}>{mode==="Nickname"&&<input aria-label="Public nickname" maxLength={40} onChange={e=>setNickname(e.target.value)} placeholder="Public nickname · 公开昵称" value={nickname}/>}<textarea maxLength={500} onChange={e=>setText(e.target.value)} placeholder="What’s on your mind?  你想问什么？" value={text}/><span className="forum-count">{text.length}/500</span><div className="forum-category-picker">{categories.map(c=><button className={postCategory===c?"active":""} onClick={()=>setPostCategory(c)} type="button" key={c}>{c}</button>)}</div><button className="forum-post" type="submit">Post Question　发布问题　➤</button>{notice&&<p className="forum-notice" role="status">{notice}</p>}</form><p className="forum-respect">All questions should protect privacy and remain respectful.<br/>请勿填写真实姓名、电话、课表或其他私人信息。</p></section>
       <section className="forum-glass-card popular-topics"><h2>Popular Topics <span>热门话题</span></h2>{seed.slice(0,5).map((q,i)=><div className={`popular-topic-item ${popularOpen===q.id?"open":""}`} key={q.id}><button onClick={()=>setPopularOpen(popularOpen===q.id?null:q.id)} type="button"><b>{i+1}</b><span>{q.title}<small>{q.zh}</small></span><em>{popularOpen===q.id?"收起":"查看解答"}</em></button>{popularOpen===q.id&&<div className="popular-topic-answer"><p className="popular-question">{q.body}</p>{(starterReplies[q.id]??[]).map(reply=><article key={reply.id}><strong>{reply.author}<small>{reply.role}</small></strong><p>{reply.text}</p><time>{reply.time}</time></article>)}</div>}</div>)}</section>
     </div>
     <section className="forum-glass-card forum-browser"><div className="forum-chat-title"><div><span className="forum-online-dot"/>Campus Community Chat <small>校园聊天广场</small></div><button className={autoTranslate?"active":""} onClick={()=>setAutoTranslate(v=>!v)} type="button">Auto Translate <span>自动翻译</span> {autoTranslate?"ON":"OFF"}</button></div><p className="forum-chat-subtitle">Everyone can see questions and replies · 所有人都能看到提问与回复</p><div className="forum-search"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search chat history… 搜索聊天记录…"/><select value={category} onChange={e=>setCategory(e.target.value)} aria-label="Filter category"><option>All</option>{categories.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div className="forum-group-chat"><div className="forum-group-messages">{visibleFeed.map(message=><article className={message.mine?"mine":""} key={message.id}><div className="forum-chat-avatar" aria-hidden="true">{message.author.slice(0,1)}</div><div className="forum-chat-message"><header><strong>{message.author}</strong><span>{message.role}</span><time>{message.time}</time></header>{message.replyTo&&<small>{message.replyTo}</small>}<p>{message.text}</p>{autoTranslate&&feedTranslations[message.id]&&<p className="forum-translation"><b>译</b>{feedTranslations[message.id]}</p>}<em>{message.category}</em></div></article>)}{!visibleFeed.length&&<div className="forum-no-replies">No matching chat messages.<br/>没有找到相关聊天记录。</div>}</div><form className="forum-reply-box forum-group-compose" onSubmit={sendReply}><textarea value={replyDraft} onChange={e=>setReplyDraft(e.target.value)} placeholder="Message the campus square… 在聊天广场发言…" rows={2}/><button type="submit">Send 发送</button></form></div>
+      <div className="forum-group-chat"><div className="forum-group-messages">{visibleFeed.map(message=><article className={message.mine?"mine":""} key={message.id}><div className="forum-chat-avatar" aria-hidden="true">{message.author.slice(0,1)}</div><div className="forum-chat-message"><header><strong>{message.author}</strong><span>{message.role}</span><time>{message.time}</time></header>{message.replyTo&&<small>{message.replyTo}</small>}<p>{message.text}</p>{autoTranslate&&feedTranslations[message.id]&&<p className="forum-translation"><b>译</b>{feedTranslations[message.id]}</p>}<em>{message.category}</em>{message.isQuestion&&message.questionId&&<button type="button" onClick={()=>setReplyTargetId(message.questionId||"")}>Reply · 回复</button>}</div></article>)}{!visibleFeed.length&&<div className="forum-no-replies">No matching chat messages.<br/>没有找到相关聊天记录。</div>}</div><form className="forum-reply-box forum-group-compose" onSubmit={sendReply}>{replyTargetId&&<small>Replying to a public question · 正在回复公开问题</small>}<textarea value={replyDraft} onChange={e=>setReplyDraft(e.target.value)} placeholder="Reply to a public question… 回复公开问题…" rows={2}/><button type="submit">Send 发送</button></form></div>
     </section></div>
     <footer className="peer-forum-help forum-footer-natural"><div className="forum-footer-copy"><strong>Still need help? <span>还需要更多帮助？</span></strong><Link href="/school-information/people">Talk to a Peer Mentor<br/><span>联系同伴导师</span></Link><Link href="/school-information/people">Contact a Counselor<br/><span>联系辅导员</span></Link><Link href="/school-information/clubs">Visit the Activities Office<br/><span>访问活动办公室</span></Link></div></footer>
   </div></main>;

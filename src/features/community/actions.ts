@@ -11,16 +11,18 @@ export type CommunityActionState = {
   message: string;
 };
 
-const notSignedInMessage =
-  "请先登录后再发表。Please sign in before posting.";
-
-async function requireUser() {
+async function getPostingContext() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { supabase, user };
+  let displayName = "匿名同学 / Anonymous";
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
+    displayName = profile?.nickname || "Community Student";
+  }
+  return { supabase, user, displayName };
 }
 
 export async function submitQuestionAction(
@@ -37,18 +39,20 @@ export async function submitQuestionAction(
     };
   }
 
-  const { supabase, user } = await requireUser();
-  if (!user) {
-    return { ok: false, message: notSignedInMessage };
-  }
+  const { supabase, user, displayName } = await getPostingContext();
+  const requestedDisplayName = formData.get("displayName");
+  const publicDisplayName = typeof requestedDisplayName === "string" && requestedDisplayName.trim().length >= 2
+    ? requestedDisplayName.trim().slice(0, 40)
+    : displayName;
 
   const { error } = await supabase.from("questions").insert({
-    author_id: user.id,
+    author_id: user?.id ?? null,
+    display_name: publicDisplayName,
     category: parsed.data.category,
     title: parsed.data.title,
     body: parsed.data.body,
     language: parsed.data.language,
-    status: "pending",
+    status: "approved",
   });
 
   if (error) {
@@ -58,10 +62,10 @@ export async function submitQuestionAction(
     };
   }
 
-  revalidatePath("/ask");
+  revalidatePath("/ask/questions");
   return {
     ok: true,
-    message: "已提交审核。Your question was submitted for review.",
+    message: "发布成功！你的问题现在已公开。Published — your question is now public.",
   };
 }
 
@@ -79,18 +83,16 @@ export async function submitStoryAction(
     };
   }
 
-  const { supabase, user } = await requireUser();
-  if (!user) {
-    return { ok: false, message: notSignedInMessage };
-  }
+  const { supabase, user, displayName } = await getPostingContext();
 
   const { error } = await supabase.from("stories").insert({
-    author_id: user.id,
+    author_id: user?.id ?? null,
+    display_name: parsed.data.publishAsAnonymous ? "匿名同学 / Anonymous" : displayName,
     title: parsed.data.title,
     body: parsed.data.body,
     language: parsed.data.language,
     publish_as_anonymous: parsed.data.publishAsAnonymous,
-    status: "pending",
+    status: "approved",
   });
 
   if (error) {
@@ -100,11 +102,35 @@ export async function submitStoryAction(
     };
   }
 
-  revalidatePath("/ask");
+  revalidatePath("/ask/stories");
   return {
     ok: true,
-    message: "故事已提交审核。Your story was submitted for review.",
+    message: "故事已发布。Your story is now public.",
   };
+}
+
+export async function submitReplyAction(
+  _previousState: CommunityActionState,
+  formData: FormData,
+): Promise<CommunityActionState> {
+  const questionId = formData.get("questionId");
+  const body = formData.get("body");
+  if (typeof questionId !== "string" || !questionId || typeof body !== "string" || body.trim().length < 10) {
+    return { ok: false, message: "请选择问题并至少写 10 个字。Choose a question and write at least 10 characters." };
+  }
+  const { supabase, user, displayName } = await getPostingContext();
+  const { error } = await supabase.from("replies").insert({
+    author_id: user?.id ?? null,
+    display_name: displayName,
+    question_id: questionId,
+    story_id: null,
+    body: body.trim(),
+    language: "bilingual",
+    status: "approved",
+  });
+  if (error) return { ok: false, message: "暂时无法发送回复。Unable to send your reply right now." };
+  revalidatePath("/ask/questions");
+  return { ok: true, message: "回复已公开。Your reply is now public." };
 }
 
 export async function postQuestionFormAction(formData: FormData): Promise<void> {

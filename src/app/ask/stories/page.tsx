@@ -1,5 +1,7 @@
-import { postStoryFormAction } from "@/features/community/actions";
 import { getApprovedStoryCards } from "@/features/community/public-data";
+import { StorySubmissionForm } from "@/features/community/story-submission-form";
+
+export const dynamic = "force-dynamic";
 
 const sampleStoryTitles = [
   "My first lunch alone",
@@ -16,7 +18,7 @@ export default async function AskStoriesPage() {
       : sampleStoryTitles.map((title, index) => ({
           id: `sample-${index}`,
           title,
-          body: "A reviewed student story will appear here after submission and moderation.",
+          body: "A public student story will appear here after a successful submission.",
           authorLabel: "Coming soon",
         }));
 
@@ -28,7 +30,7 @@ export default async function AskStoriesPage() {
           <h1 id="public-stories-heading">像浏览文章一样，找到和你相似的故事</h1>
           <p>
             You do not have to share everything immediately. Start by browsing titles, then open the story that feels
-            closest to your moment. Student submissions are reviewed before they appear publicly.
+            closest to your moment. Public stories appear after a successful submission.
           </p>
         </div>
         <div className="section-hero__art section-hero__art--stories" aria-hidden="true" />
@@ -61,31 +63,12 @@ export default async function AskStoriesPage() {
           <p className="eyebrow">Submit a story</p>
           <h2 id="stories-heading">也可以把你的经历留给后来的人</h2>
           <p>
-            You can submit anonymously. Stories are reviewed before publication. Write honestly; it does not need to
+            You can submit anonymously. Stories are public after submission. Write honestly; it does not need to
             sound like an essay.
           </p>
         </div>
 
-        <form action={postStoryFormAction} className="auth-form">
-          <input name="language" type="hidden" value="en" />
-          <label>
-            Story title
-            <input name="title" placeholder="My first lunch alone" />
-          </label>
-          <label>
-            Your story
-            <textarea
-              name="body"
-              placeholder="Share what happened, what helped, and what you wish someone had told you."
-              rows={8}
-            />
-          </label>
-          <label className="checkbox-label">
-            <input defaultChecked name="publishAsAnonymous" type="checkbox" />
-            Publish as Anonymous Student
-          </label>
-          <button type="submit">Submit story for review</button>
-        </form>
+        <StorySubmissionForm />
       </section>
     </main>
   );

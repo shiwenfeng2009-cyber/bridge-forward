@@ -6,7 +6,7 @@ import {
 } from "@/features/community/form-data";
 
 describe("community form data parsing", () => {
-  it("parses question form data into a pending reviewed question", () => {
+  it("parses question form data into an approved public question", () => {
     const formData = new FormData();
     formData.set("category", "english_confidence");
     formData.set("title", "I am afraid to speak English in class");
@@ -17,12 +17,12 @@ describe("community form data parsing", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.status).toBe("pending");
+      expect(result.data.status).toBe("approved");
       expect(result.data.category).toBe("english_confidence");
     }
   });
 
-  it("parses story form data as anonymous by default and pending review", () => {
+  it("parses story form data as anonymous and public by default", () => {
     const formData = new FormData();
     formData.set("title", "My first lunch alone");
     formData.set("body", "I did not know where to sit, but later I found a club room.");
@@ -34,7 +34,7 @@ describe("community form data parsing", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.publishAsAnonymous).toBe(true);
-      expect(result.data.status).toBe("pending");
+      expect(result.data.status).toBe("approved");
     }
   });
 

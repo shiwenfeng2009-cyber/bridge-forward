@@ -9,7 +9,7 @@ import {
 } from "@/features/community/schemas";
 
 describe("community schemas and moderation rules", () => {
-  it("creates questions in pending review state without exposing the author publicly", () => {
+  it("creates ordinary questions in an immediately public state", () => {
     const result = questionSchema.safeParse({
       category: "making_friends",
       title: "I feel lonely at lunch. What should I do?",
@@ -19,14 +19,14 @@ describe("community schemas and moderation rules", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.status).toBe("pending");
+      expect(result.data.status).toBe("approved");
     }
     expect(publicAuthorLabel({ anonymous: true, nickname: "IslandBridge" })).toBe(
-      "Anonymous Student",
+      "匿名同学 / Anonymous",
     );
   });
 
-  it("creates stories in pending review state and allows founder-style themes", () => {
+  it("creates ordinary stories in an immediately public state", () => {
     const result = storySchema.safeParse({
       title: "My first lunch alone",
       body: "I did not know where to sit during my first month.",
@@ -36,13 +36,13 @@ describe("community schemas and moderation rules", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.status).toBe("pending");
+      expect(result.data.status).toBe("approved");
     }
   });
 
-  it("requires new users first three replies to be reviewed", () => {
-    expect(getInitialReplyStatus({ approvedReplyCount: 0 })).toBe("pending");
-    expect(getInitialReplyStatus({ approvedReplyCount: 2 })).toBe("pending");
+  it("publishes ordinary replies immediately", () => {
+    expect(getInitialReplyStatus({ approvedReplyCount: 0 })).toBe("approved");
+    expect(getInitialReplyStatus({ approvedReplyCount: 2 })).toBe("approved");
     expect(getInitialReplyStatus({ approvedReplyCount: 3 })).toBe("approved");
   });
 
